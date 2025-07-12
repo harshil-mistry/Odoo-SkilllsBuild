@@ -41,6 +41,12 @@ class SwapRequest(db.Model):
     skill_wanted_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=True)
     status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    from_user = db.relationship('User', foreign_keys=[from_user_id], backref='sent_requests')
+    to_user = db.relationship('User', foreign_keys=[to_user_id], backref='received_requests')
+    skill_offered = db.relationship('Skill', foreign_keys=[skill_offered_id])
+    skill_wanted = db.relationship('Skill', foreign_keys=[skill_wanted_id])
 
 # Skill Model
 class Skill(db.Model):
@@ -83,6 +89,14 @@ class User(UserMixin, db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+@app.context_processor
+def inject_pending_requests():
+    """Inject pending request count into all templates"""
+    if current_user.is_authenticated:
+        pending_count = SwapRequest.query.filter_by(to_user_id=current_user.id, status='pending').count()
+        return {'pending_requests_count': pending_count}
+    return {'pending_requests_count': 0}
 
 # Routes
 @app.route('/')
@@ -246,13 +260,68 @@ def search():
             users = users.filter(User.weekends_available == True)
 
     users = users.distinct().all()
-    return render_template('search.html', users=users, query=query, location=location, availability=availability)
+    
+    # Get current user's skills for the swap request form
+    current_user_skills_offered = [{'id': skill.id, 'name': skill.name} for skill in current_user.skills_offered]
+    current_user_skills_wanted = [{'id': skill.id, 'name': skill.name} for skill in current_user.skills_wanted]
+    
+    # Convert users' skills to serializable format for the template
+    users_with_skills = []
+    for user in users:
+        user_data = {
+            'id': user.id,
+            'name': user.name,
+            'location': user.location,
+            'bio': user.bio,
+            'profile_photo': user.profile_photo,
+            'profile_photo_type': user.profile_photo_type,
+            'weekdays_available': user.weekdays_available,
+            'evenings_available': user.evenings_available,
+            'weekends_available': user.weekends_available,
+            'skills_offered': [{'id': skill.id, 'name': skill.name} for skill in user.skills_offered],
+            'skills_wanted': [{'id': skill.id, 'name': skill.name} for skill in user.skills_wanted]
+        }
+        users_with_skills.append(user_data)
+    
+    return render_template('search.html', 
+                         users=users_with_skills, 
+                         query=query, 
+                         location=location, 
+                         availability=availability,
+                         current_user_skills_offered=current_user_skills_offered,
+                         current_user_skills_wanted=current_user_skills_wanted)
 
 @app.route('/send_swap_request/<int:to_user_id>', methods=['POST'])
 @login_required
 def send_swap_request(to_user_id):
     if to_user_id == current_user.id:
         flash('You cannot send a swap request to yourself.', 'error')
+        return redirect(url_for('search'))
+    
+    # Get form data
+    skill_offered_id = request.form.get('skill_offered_id')
+    skill_wanted_id = request.form.get('skill_wanted_id')
+    
+    # Validate that skills are provided
+    if not skill_offered_id or not skill_wanted_id:
+        flash('Please select both a skill to offer and a skill to receive.', 'error')
+        return redirect(url_for('search'))
+    
+    # Validate that the offered skill belongs to current user
+    offered_skill = Skill.query.get(skill_offered_id)
+    if not offered_skill or offered_skill not in current_user.skills_offered:
+        flash('Please select a skill that you can offer.', 'error')
+        return redirect(url_for('search'))
+    
+    # Validate that the wanted skill belongs to the target user
+    target_user = User.query.get(to_user_id)
+    if not target_user:
+        flash('User not found.', 'error')
+        return redirect(url_for('search'))
+    
+    wanted_skill = Skill.query.get(skill_wanted_id)
+    if not wanted_skill or wanted_skill not in target_user.skills_offered:
+        flash('Please select a skill that the user can offer.', 'error')
         return redirect(url_for('search'))
     
     # Check if request already exists
@@ -266,10 +335,17 @@ def send_swap_request(to_user_id):
         flash('You have already sent a swap request to this user.', 'error')
         return redirect(url_for('search'))
     
-    swap = SwapRequest(from_user_id=current_user.id, to_user_id=to_user_id)
+    # Create swap request with specific skills
+    swap = SwapRequest(
+        from_user_id=current_user.id, 
+        to_user_id=to_user_id,
+        skill_offered_id=skill_offered_id,
+        skill_wanted_id=skill_wanted_id
+    )
     db.session.add(swap)
     db.session.commit()
-    flash('Swap request sent!', 'success')
+    
+    flash(f'Swap request sent! You offered "{offered_skill.name}" for "{wanted_skill.name}".', 'success')
     return redirect(url_for('search'))
 
 @app.route('/api/skills', methods=['GET'])
@@ -337,6 +413,89 @@ def get_profile_skills():
         'skills_offered': [{'id': skill.id, 'name': skill.name} for skill in current_user.skills_offered],
         'skills_wanted': [{'id': skill.id, 'name': skill.name} for skill in current_user.skills_wanted]
     })
+
+@app.route('/swap_requests')
+@login_required
+def swap_requests():
+    """Display all swap requests for the current user"""
+    # Get requests sent by current user
+    sent_requests = SwapRequest.query.filter_by(from_user_id=current_user.id).order_by(SwapRequest.created_at.desc()).all()
+    
+    # Get requests received by current user
+    received_requests = SwapRequest.query.filter_by(to_user_id=current_user.id).order_by(SwapRequest.created_at.desc()).all()
+    
+    return render_template('swap_requests.html', 
+                         sent_requests=sent_requests, 
+                         received_requests=received_requests)
+
+@app.route('/accept_swap_request/<int:request_id>', methods=['POST'])
+@login_required
+def accept_swap_request(request_id):
+    """Accept a swap request"""
+    swap_request = SwapRequest.query.get_or_404(request_id)
+    
+    # Check if current user is the receiver
+    if swap_request.to_user_id != current_user.id:
+        flash('You can only accept requests sent to you.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Check if request is still pending
+    if swap_request.status != 'pending':
+        flash('This request has already been processed.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Update status to accepted
+    swap_request.status = 'accepted'
+    db.session.commit()
+    
+    flash('Swap request accepted! You can now coordinate with the other user.', 'success')
+    return redirect(url_for('swap_requests'))
+
+@app.route('/reject_swap_request/<int:request_id>', methods=['POST'])
+@login_required
+def reject_swap_request(request_id):
+    """Reject a swap request"""
+    swap_request = SwapRequest.query.get_or_404(request_id)
+    
+    # Check if current user is the receiver
+    if swap_request.to_user_id != current_user.id:
+        flash('You can only reject requests sent to you.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Check if request is still pending
+    if swap_request.status != 'pending':
+        flash('This request has already been processed.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Update status to rejected
+    swap_request.status = 'rejected'
+    db.session.commit()
+    
+    flash('Swap request rejected.', 'info')
+    return redirect(url_for('swap_requests'))
+
+@app.route('/delete_swap_request/<int:request_id>', methods=['POST'])
+@login_required
+def delete_swap_request(request_id):
+    """Delete a pending swap request (only sender can delete)"""
+    swap_request = SwapRequest.query.get_or_404(request_id)
+    
+    # Check if current user is the sender
+    if swap_request.from_user_id != current_user.id:
+        flash('You can only delete requests you sent.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Check if request is still pending
+    if swap_request.status != 'pending':
+        flash('You can only delete pending requests.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Delete the request
+    db.session.delete(swap_request)
+    db.session.commit()
+    
+    flash('Swap request deleted.', 'info')
+    return redirect(url_for('swap_requests'))
 
 if __name__ == '__main__':
     with app.app_context():

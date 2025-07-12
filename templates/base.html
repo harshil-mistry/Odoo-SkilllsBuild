@@ -45,6 +45,14 @@
                         <a href="{{ url_for('search') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-search mr-2"></i>Search
                         </a>
+                        <a href="{{ url_for('swap_requests') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors relative">
+                            <i class="fas fa-exchange-alt mr-2"></i>Swap Requests
+                            {% if pending_requests_count > 0 %}
+                                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                    {{ pending_requests_count }}
+                                </span>
+                            {% endif %}
+                        </a>
                         <a href="{{ url_for('profile') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-user mr-2"></i>Profile
                         </a>

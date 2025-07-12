@@ -199,12 +199,12 @@
                     
                     <!-- Action Button -->
                     <div class="p-6">
-                        <form method="post" action="{{ url_for('send_swap_request', to_user_id=user.id) }}">
-                            <button type="submit" 
-                                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-handshake mr-2"></i>Send Swap Request
-                            </button>
-                        </form>
+                        <button type="button" data-user-id="{{ user.id }}" 
+                                data-user-name="{{ user.name }}" 
+                                data-user-skills='{{ user.skills_offered|tojson|safe }}'
+                                class="swap-request-btn w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                            <i class="fas fa-handshake mr-2"></i>Send Swap Request
+                        </button>
                     </div>
                 </div>
             {% endfor %}
@@ -230,4 +230,134 @@
         </div>
     {% endif %}
 </div>
+
+<!-- Swap Request Modal -->
+<div id="swapModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Send Swap Request</h3>
+                <button onclick="closeSwapModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="swapForm" method="post">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-3">Sending request to: <span id="targetUserName" class="font-medium text-gray-900"></span></p>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="skill_offered_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        I will offer:
+                    </label>
+                    <select id="skill_offered_id" name="skill_offered_id" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select a skill to offer</option>
+                        {% for skill in current_user_skills_offered %}
+                            <option value="{{ skill.id }}">{{ skill.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-6">
+                    <label for="skill_wanted_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        I want to receive:
+                    </label>
+                    <select id="skill_wanted_id" name="skill_wanted_id" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select a skill to receive</option>
+                    </select>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button type="submit" 
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        <i class="fas fa-paper-plane mr-2"></i>Send Request
+                    </button>
+                    <button type="button" onclick="closeSwapModal()"
+                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentTargetUserId = null;
+let currentTargetUserSkills = [];
+
+// Add event listeners when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, setting up event listeners');
+    
+    // Add click handlers to all swap request buttons
+    const buttons = document.querySelectorAll('.swap-request-btn');
+    console.log('Found', buttons.length, 'swap request buttons');
+    
+    buttons.forEach((button, index) => {
+        console.log('Setting up button', index, 'with user ID:', button.getAttribute('data-user-id'));
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Button clicked!');
+            
+            const userId = this.getAttribute('data-user-id');
+            const userName = this.getAttribute('data-user-name');
+            const userSkillsAttr = this.getAttribute('data-user-skills');
+            
+            console.log('User ID:', userId);
+            console.log('User Name:', userName);
+            console.log('User Skills Attr:', userSkillsAttr);
+            
+            try {
+                const userSkills = JSON.parse(userSkillsAttr);
+                console.log('Parsed user skills:', userSkills);
+                openSwapModal(userId, userName, userSkills);
+            } catch (error) {
+                console.error('Error parsing user skills:', error);
+                alert('Error loading user data. Please try again.');
+            }
+        });
+    });
+});
+
+function openSwapModal(userId, userName, userSkills) {
+    console.log('Opening modal for user:', userName, 'with skills:', userSkills);
+    
+    currentTargetUserId = userId;
+    currentTargetUserSkills = userSkills;
+    
+    document.getElementById('targetUserName').textContent = userName;
+    document.getElementById('swapForm').action = `/send_swap_request/${userId}`;
+    
+    // Populate the skills wanted dropdown
+    const skillWantedSelect = document.getElementById('skill_wanted_id');
+    skillWantedSelect.innerHTML = '<option value="">Select a skill to receive</option>';
+    
+    userSkills.forEach(skill => {
+        const option = document.createElement('option');
+        option.value = skill.id;
+        option.textContent = skill.name;
+        skillWantedSelect.appendChild(option);
+    });
+    
+    // Reset form
+    document.getElementById('skill_offered_id').value = '';
+    document.getElementById('skill_wanted_id').value = '';
+    
+    // Show modal
+    const modal = document.getElementById('swapModal');
+    modal.classList.remove('hidden');
+    console.log('Modal should now be visible');
+}
+
+function closeSwapModal() {
+    console.log('Closing modal');
+    document.getElementById('swapModal').classList.add('hidden');
+    currentTargetUserId = null;
+    currentTargetUserSkills = [];
+}
+</script>
 {% endblock %} 
