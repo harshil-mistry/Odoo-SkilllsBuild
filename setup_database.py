@@ -55,6 +55,7 @@ def create_database():
                 profile_photo LONGBLOB,
                 profile_photo_type VARCHAR(50),
                 bio TEXT,
+                contact_number VARCHAR(20),
                 is_public BOOLEAN DEFAULT TRUE,
                 weekdays_available BOOLEAN DEFAULT FALSE,
                 evenings_available BOOLEAN DEFAULT FALSE,

@@ -31,6 +31,16 @@
                                     <i class="fas fa-map-marker-alt mr-2"></i>{{ user.location }}
                                 </p>
                             {% endif %}
+                            {% if user.contact_number %}
+                                <p class="text-gray-600 mt-1 text-sm sm:text-base">
+                                    <i class="fas fa-phone mr-2"></i>{{ user.contact_number }}
+                                </p>
+                            {% endif %}
+                            {% if user.email %}
+                                <p class="text-gray-600 mt-1 text-sm sm:text-base">
+                                    <i class="fas fa-envelope mr-2"></i>{{ user.email }}
+                                </p>
+                            {% endif %}
                         </div>
                         
                         <!-- Action Buttons -->

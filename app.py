@@ -86,6 +86,7 @@ class User(UserMixin, db.Model):
     profile_photo = db.Column(db.LargeBinary, nullable=True)  # Changed to BLOB
     profile_photo_type = db.Column(db.String(50), nullable=True)  # Store MIME type
     bio = db.Column(db.Text, nullable=True)
+    contact_number = db.Column(db.String(20), nullable=True)  # Contact number field
     is_public = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
@@ -257,6 +258,7 @@ def profile():
         name = request.form.get('name')
         location = request.form.get('location', '')
         bio = request.form.get('bio', '')
+        contact_number = request.form.get('contact_number', '')
         is_public = request.form.get('is_public') == 'on'
         
         # Availability
@@ -268,6 +270,7 @@ def profile():
             current_user.name = name
             current_user.location = location
             current_user.bio = bio
+            current_user.contact_number = contact_number
             current_user.is_public = is_public
             current_user.weekdays_available = weekdays_available
             current_user.evenings_available = evenings_available
