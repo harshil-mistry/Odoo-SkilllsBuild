@@ -579,6 +579,11 @@ def user_profile(user_id):
                          accepted_requests=accepted_requests,
                          can_send_request=can_send_request)
 
+@app.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors with custom page"""
+    return render_template('404.html'), 404
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
