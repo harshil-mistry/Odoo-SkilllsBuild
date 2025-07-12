@@ -5,9 +5,13 @@ request others in return
 Team Name : Team 1796 (CodeFreaks)
 
 Team Members :
+
 Harshil Mistry (harshilmistry31@gmail.com) - Team Leader
+
 Tarishi Jain (23cs027@charusat.edu.in)
+
 Harsh Dodiya (d24cs119@charusat.edu.in)
+
 Ishita Prajapati (23cs079@charusat.edu.in)
 
 Youtube Presentaion Video : https://www.youtube.com/watch?v=-rAHn2wHWDY
