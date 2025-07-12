@@ -1,4 +1,4 @@
-Youtube Presentaion Video : https://github.com/harshil-mistry/Odoo-SkilllsBuild
+Youtube Presentaion Video : https://www.youtube.com/watch?v=-rAHn2wHWDY
 
 # SkillsBuild - Professional Skill Exchange Platform
 
