@@ -1,3 +1,5 @@
+Youtube Presentaion Video : https://github.com/harshil-mistry/Odoo-SkilllsBuild
+
 # SkillsBuild - Professional Skill Exchange Platform
 
 A modern web application built with Flask, MySQL, and Tailwind CSS that enables users to exchange skills with each other. Users can offer their expertise and find others who can teach them new skills through a collaborative learning platform.
