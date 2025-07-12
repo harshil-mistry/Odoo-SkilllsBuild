@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="transition-colors duration-300">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,46 +7,73 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
                         primary: {
-                            50: '#eff6ff',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                        }
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        },
+                        dark: '#18181b',
+                        black: '#000',
                     }
                 }
             }
         }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        html.dark body { background-color: #18181b; }
+        html.dark .bg-white { background-color: #18181b !important; }
+        html.dark .text-gray-900, html.dark .text-gray-700 { color: #fff !important; }
+        html.dark .bg-gray-50 { background-color: #18181b !important; }
+        html.dark .bg-gray-800 { background-color: #11101a !important; }
+        html.dark .text-gray-300 { color: #bbb !important; }
+        html.dark .border-gray-200 { border-color: #333 !important; }
+        html.dark .bg-blue-50, html.dark .bg-purple-50, html.dark .bg-green-50, html.dark .bg-yellow-50 { background-color: #232136 !important; }
+        html.dark .bg-blue-100, html.dark .bg-purple-100, html.dark .bg-green-100, html.dark .bg-yellow-100 { background-color: #312e81 !important; }
+        html.dark .bg-gradient-to-br, html.dark .bg-gradient-to-r { background-image: linear-gradient(90deg, #232136 0%, #6d28d9 100%) !important; }
+        html.dark .shadow-lg, html.dark .shadow-md { box-shadow: 0 2px 8px 0 #0004 !important; }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen transition-colors duration-300">
     <!-- Navigation -->
-    <nav class="bg-white shadow-lg border-b border-gray-200">
+    <nav class="bg-white dark:bg-black shadow-lg border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="{{ url_for('landing') }}" class="flex items-center space-x-2">
-                        <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <div class="w-8 h-8 bg-gradient-to-r from-purple-600 to-black rounded-lg flex items-center justify-center">
                             <i class="fas fa-graduation-cap text-white text-sm"></i>
                         </div>
-                        <span class="text-xl font-bold text-gray-900">SkillsBuild</span>
+                        <span class="text-xl font-bold text-gray-900 dark:text-white">SkillsBuild</span>
                     </a>
                 </div>
-                
+                <!-- Theme Toggle Button -->
+                <div class="flex items-center space-x-2">
+                    <button id="theme-toggle" class="text-gray-700 dark:text-gray-200 hover:text-purple-500 dark:hover:text-yellow-400 p-2 rounded-md focus:outline-none transition-colors" title="Toggle light/dark mode">
+                        <i id="theme-toggle-icon" class="fas fa-moon"></i>
+                    </button>
+                </div>
                 <!-- Desktop Navigation -->
                 <div class="hidden md:flex items-center space-x-4">
                     {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('dashboard') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <a href="{{ url_for('dashboard') }}" class="text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
                         </a>
-                        <a href="{{ url_for('search') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <a href="{{ url_for('search') }}" class="text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-search mr-2"></i>Search
                         </a>
-                        <a href="{{ url_for('swap_requests') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors relative">
+                        <a href="{{ url_for('swap_requests') }}" class="text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-sm font-medium transition-colors relative">
                             <i class="fas fa-exchange-alt mr-2"></i>Swap Requests
                             {% if pending_requests_count > 0 %}
                                 <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -54,41 +81,39 @@
                                 </span>
                             {% endif %}
                         </a>
-                        <a href="{{ url_for('profile') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <a href="{{ url_for('profile') }}" class="text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-user mr-2"></i>Profile
                         </a>
                         <a href="{{ url_for('logout') }}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </a>
                     {% else %}
-                        <a href="{{ url_for('login') }}" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <a href="{{ url_for('login') }}" class="text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-sign-in-alt mr-2"></i>Login
                         </a>
-                        <a href="{{ url_for('register') }}" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+                        <a href="{{ url_for('register') }}" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
                             <i class="fas fa-user-plus mr-2"></i>Sign Up
                         </a>
                     {% endif %}
                 </div>
-                
                 <!-- Mobile menu button -->
                 <div class="md:hidden flex items-center">
-                    <button id="mobile-menu-button" class="text-gray-700 hover:text-blue-600 p-2 rounded-md">
+                    <button id="mobile-menu-button" class="text-gray-700 dark:text-gray-200 hover:text-purple-500 p-2 rounded-md">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
                 </div>
             </div>
-            
             <!-- Mobile Navigation -->
             <div id="mobile-menu" class="hidden md:hidden">
-                <div class="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200">
+                <div class="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200 dark:border-gray-700">
                     {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('dashboard') }}" class="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors">
+                        <a href="{{ url_for('dashboard') }}" class="block text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-base font-medium transition-colors">
                             <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
                         </a>
-                        <a href="{{ url_for('search') }}" class="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors">
+                        <a href="{{ url_for('search') }}" class="block text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-base font-medium transition-colors">
                             <i class="fas fa-search mr-2"></i>Search
                         </a>
-                        <a href="{{ url_for('swap_requests') }}" class="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors relative">
+                        <a href="{{ url_for('swap_requests') }}" class="block text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-base font-medium transition-colors relative">
                             <i class="fas fa-exchange-alt mr-2"></i>Swap Requests
                             {% if pending_requests_count > 0 %}
                                 <span class="ml-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 inline-flex items-center justify-center">
@@ -96,17 +121,17 @@
                                 </span>
                             {% endif %}
                         </a>
-                        <a href="{{ url_for('profile') }}" class="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors">
+                        <a href="{{ url_for('profile') }}" class="block text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-base font-medium transition-colors">
                             <i class="fas fa-user mr-2"></i>Profile
                         </a>
                         <a href="{{ url_for('logout') }}" class="block bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md text-base font-medium transition-colors">
                             <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </a>
                     {% else %}
-                        <a href="{{ url_for('login') }}" class="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium transition-colors">
+                        <a href="{{ url_for('login') }}" class="block text-gray-700 dark:text-gray-200 hover:text-purple-500 px-3 py-2 rounded-md text-base font-medium transition-colors">
                             <i class="fas fa-sign-in-alt mr-2"></i>Login
                         </a>
-                        <a href="{{ url_for('register') }}" class="block bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md text-base font-medium transition-colors">
+                        <a href="{{ url_for('register') }}" class="block bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md text-base font-medium transition-colors">
                             <i class="fas fa-user-plus mr-2"></i>Sign Up
                         </a>
                     {% endif %}
@@ -147,7 +172,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white mt-16">
+    <footer class="bg-gray-800 dark:bg-black text-white mt-16">
         <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <p class="text-gray-300">&copy; 2024 SkillsBuild. All rights reserved.</p>
@@ -160,6 +185,33 @@
         document.getElementById('mobile-menu-button').addEventListener('click', function() {
             const mobileMenu = document.getElementById('mobile-menu');
             mobileMenu.classList.toggle('hidden');
+        });
+
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-toggle-icon');
+        function setTheme(dark) {
+            if (dark) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+            }
+        }
+        // Initial theme
+        const userTheme = localStorage.getItem('theme');
+        if (userTheme === 'dark' || (!userTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            setTheme(true);
+        } else {
+            setTheme(false);
+        }
+        themeToggle.addEventListener('click', function() {
+            setTheme(!document.documentElement.classList.contains('dark'));
         });
 
         // Auto-hide flash messages after 5 seconds
