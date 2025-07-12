@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - SkillsBuild{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Profile Settings</h1>
+        <p class="text-gray-600 mt-2">Manage your account information, skills, and preferences.</p>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Profile Information -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Basic Information -->
+            <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Basic Information</h3>
+                </div>
+                <div class="p-6">
+                    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                        <!-- Profile Photo Section -->
+                        <div class="flex items-center space-x-6">
+                            <div class="flex-shrink-0">
+                                {% if current_user.profile_photo %}
+                                    <img class="h-24 w-24 rounded-full object-cover border-4 border-gray-200" 
+                                         src="{{ url_for('static', filename='uploads/' + current_user.profile_photo) }}" 
+                                         alt="Profile photo">
+                                {% else %}
+                                    <div class="h-24 w-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                                        <i class="fas fa-user text-white text-3xl"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1">
+                                <label for="profile_photo" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Update Profile Photo
+                                </label>
+                                <input type="file" id="profile_photo" name="profile_photo" accept="image/*" 
+                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                <p class="mt-1 text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Name -->
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700">
+                                Full Name <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="name" name="name" value="{{ current_user.name }}" required
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <!-- Email (Read-only) -->
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">
+                                Email Address
+                            </label>
+                            <input type="email" id="email" value="{{ current_user.email }}" disabled
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500">
+                            <p class="mt-1 text-xs text-gray-500">Email address cannot be changed</p>
+                        </div>
+                        
+                        <!-- Location -->
+                        <div>
+                            <label for="location" class="block text-sm font-medium text-gray-700">
+                                Location
+                            </label>
+                            <input type="text" id="location" name="location" value="{{ current_user.location or '' }}"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="City, Country">
+                        </div>
+                        
+                        <!-- Bio -->
+                        <div>
+                            <label for="bio" class="block text-sm font-medium text-gray-700">
+                                Bio
+                            </label>
+                            <textarea id="bio" name="bio" rows="4" 
+                                      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                      placeholder="Tell us about yourself, your experience, and what you're looking for...">{{ current_user.bio or '' }}</textarea>
+                        </div>
+                        
+                        <!-- Privacy Setting -->
+                        <div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="is_public" name="is_public" 
+                                       {% if current_user.is_public %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="is_public" class="ml-2 block text-sm text-gray-900">
+                                    Make my profile public
+                                </label>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Public profiles can be viewed by other users</p>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="flex justify-end">
+                            <button type="submit" 
+                                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-save mr-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Skills Management -->
+            <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Skills Management</h3>
+                </div>
+                <div class="p-6">
+                    <!-- Skills Offered -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            Skills I Can Offer
+                        </label>
+                        <div class="flex flex-wrap gap-2 mb-3" id="skills-offered-tags">
+                            <!-- Skills will be populated here -->
+                        </div>
+                        <div class="flex space-x-2">
+                            <input type="text" id="skill-offered-input" 
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="Type a skill and press Enter">
+                            <button type="button" onclick="addSkillOffered()" 
+                                    class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Skills Wanted -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            Skills I Want to Learn
+                        </label>
+                        <div class="flex flex-wrap gap-2 mb-3" id="skills-wanted-tags">
+                            <!-- Skills will be populated here -->
+                        </div>
+                        <div class="flex space-x-2">
+                            <input type="text" id="skill-wanted-input" 
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="Type a skill and press Enter">
+                            <button type="button" onclick="addSkillWanted()" 
+                                    class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Availability -->
+            <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Availability</h3>
+                </div>
+                <div class="p-6">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="space-y-4">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="weekdays_available" name="weekdays_available" 
+                                       {% if current_user.weekdays_available %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="weekdays_available" class="ml-2 block text-sm text-gray-900">
+                                    Available on Weekdays
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="evenings_available" name="evenings_available" 
+                                       {% if current_user.evenings_available %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="evenings_available" class="ml-2 block text-sm text-gray-900">
+                                    Available in Evenings
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="weekends_available" name="weekends_available" 
+                                       {% if current_user.weekends_available %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="weekends_available" class="ml-2 block text-sm text-gray-900">
+                                    Available on Weekends
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Account Status -->
+            <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Account Status</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Account Status</span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i>Active
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Profile Visibility</span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if current_user.is_public %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                <i class="fas {% if current_user.is_public %}fa-eye{% else %}fa-eye-slash{% endif %} mr-1"></i>
+                                {% if current_user.is_public %}Public{% else %}Private{% endif %}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Member Since</span>
+                            <span class="text-sm text-gray-900">{{ current_user.created_at.strftime('%B %Y') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Skills Summary -->
+            <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Skills Summary</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <div>
+                            <span class="text-sm text-gray-600">Skills Offered:</span>
+                            <span class="text-sm font-medium text-gray-900 ml-2" id="skills-offered-count">0</span>
+                        </div>
+                        <div>
+                            <span class="text-sm text-gray-600">Skills Wanted:</span>
+                            <span class="text-sm font-medium text-gray-900 ml-2" id="skills-wanted-count">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Quick Actions</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        <a href="{{ url_for('dashboard') }}" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-tachometer-alt text-blue-600"></i>
+                            <span class="text-gray-700">View Dashboard</span>
+                        </a>
+                        <a href="#" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-key text-green-600"></i>
+                            <span class="text-gray-700">Change Password</span>
+                        </a>
+                        <a href="#" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-bell text-purple-600"></i>
+                            <span class="text-gray-700">Notification Settings</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables for skills management
+let skillsOffered = [];
+let skillsWanted = [];
+let allSkills = [];
+
+// Load user's current skills on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserSkills();
+    loadAllSkills();
+});
+
+// Load all available skills for autocomplete
+async function loadAllSkills() {
+    try {
+        const response = await fetch('/api/skills');
+        allSkills = await response.json();
+    } catch (error) {
+        console.error('Error loading skills:', error);
+    }
+}
+
+// Load user's current skills
+async function loadUserSkills() {
+    try {
+        const response = await fetch('/api/profile/skills');
+        const data = await response.json();
+        skillsOffered = data.skills_offered || [];
+        skillsWanted = data.skills_wanted || [];
+        renderSkillsTags();
+        updateSkillsCount();
+    } catch (error) {
+        console.error('Error loading user skills:', error);
+    }
+}
+
+// Render skills tags
+function renderSkillsTags() {
+    const offeredContainer = document.getElementById('skills-offered-tags');
+    const wantedContainer = document.getElementById('skills-wanted-tags');
+    
+    offeredContainer.innerHTML = skillsOffered.map(skill => 
+        `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
+            ${skill.name}
+            <button onclick="removeSkillOffered(${skill.id})" class="ml-2 text-green-600 hover:text-green-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </span>`
+    ).join('');
+    
+    wantedContainer.innerHTML = skillsWanted.map(skill => 
+        `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+            ${skill.name}
+            <button onclick="removeSkillWanted(${skill.id})" class="ml-2 text-purple-600 hover:text-purple-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </span>`
+    ).join('');
+}
+
+// Update skills count
+function updateSkillsCount() {
+    document.getElementById('skills-offered-count').textContent = skillsOffered.length;
+    document.getElementById('skills-wanted-count').textContent = skillsWanted.length;
+}
+
+// Add skill offered
+async function addSkillOffered() {
+    const input = document.getElementById('skill-offered-input');
+    const skillName = input.value.trim();
+    
+    if (!skillName) return;
+    
+    try {
+        // Check if skill exists, if not create it
+        let skill = allSkills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
+        if (!skill) {
+            const response = await fetch('/api/skills', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: skillName})
+            });
+            skill = await response.json();
+            allSkills.push(skill);
+        }
+        
+        // Add to user's skills if not already present
+        if (!skillsOffered.find(s => s.id === skill.id)) {
+            skillsOffered.push(skill);
+            await updateUserSkills();
+            renderSkillsTags();
+            updateSkillsCount();
+        }
+        
+        input.value = '';
+    } catch (error) {
+        console.error('Error adding skill:', error);
+    }
+}
+
+// Add skill wanted
+async function addSkillWanted() {
+    const input = document.getElementById('skill-wanted-input');
+    const skillName = input.value.trim();
+    
+    if (!skillName) return;
+    
+    try {
+        // Check if skill exists, if not create it
+        let skill = allSkills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
+        if (!skill) {
+            const response = await fetch('/api/skills', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: skillName})
+            });
+            skill = await response.json();
+            allSkills.push(skill);
+        }
+        
+        // Add to user's skills if not already present
+        if (!skillsWanted.find(s => s.id === skill.id)) {
+            skillsWanted.push(skill);
+            await updateUserSkills();
+            renderSkillsTags();
+            updateSkillsCount();
+        }
+        
+        input.value = '';
+    } catch (error) {
+        console.error('Error adding skill:', error);
+    }
+}
+
+// Remove skill offered
+async function removeSkillOffered(skillId) {
+    skillsOffered = skillsOffered.filter(s => s.id !== skillId);
+    await updateUserSkills();
+    renderSkillsTags();
+    updateSkillsCount();
+}
+
+// Remove skill wanted
+async function removeSkillWanted(skillId) {
+    skillsWanted = skillsWanted.filter(s => s.id !== skillId);
+    await updateUserSkills();
+    renderSkillsTags();
+    updateSkillsCount();
+}
+
+// Update user skills in database
+async function updateUserSkills() {
+    try {
+        await fetch('/api/profile/skills', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                skills_offered: skillsOffered.map(s => s.id),
+                skills_wanted: skillsWanted.map(s => s.id)
+            })
+        });
+    } catch (error) {
+        console.error('Error updating skills:', error);
+    }
+}
+
+// Profile photo preview
+document.getElementById('profile_photo').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const profilePhotoContainer = document.querySelector('.flex-shrink-0');
+            profilePhotoContainer.innerHTML = `
+                <img class="h-24 w-24 rounded-full object-cover border-4 border-gray-200" 
+                     src="${e.target.result}" alt="Profile photo preview">
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Enter key handlers for skill inputs
+document.getElementById('skill-offered-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        addSkillOffered();
+    }
+});
+
+document.getElementById('skill-wanted-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        addSkillWanted();
+    }
+});
+</script>
+{% endblock %} 
