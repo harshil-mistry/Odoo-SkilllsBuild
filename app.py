@@ -39,6 +39,7 @@ class SwapRequest(db.Model):
     to_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     skill_offered_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=True)
     skill_wanted_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=True)
+    message = db.Column(db.Text, nullable=True)  # Optional message from sender
     status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
