@@ -99,6 +99,7 @@ def create_database():
                 to_user_id INT NOT NULL,
                 skill_offered_id INT,
                 skill_wanted_id INT,
+                message TEXT,
                 status VARCHAR(20) DEFAULT 'pending',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (from_user_id) REFERENCES user(id) ON DELETE CASCADE,

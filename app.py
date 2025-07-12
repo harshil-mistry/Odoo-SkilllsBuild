@@ -348,6 +348,7 @@ def send_swap_request(to_user_id):
     # Get form data
     skill_offered_id = request.form.get('skill_offered_id')
     skill_wanted_id = request.form.get('skill_wanted_id')
+    message = request.form.get('message', '').strip()  # Optional message
     
     # Validate that skills are provided
     if not skill_offered_id or not skill_wanted_id:
@@ -382,12 +383,13 @@ def send_swap_request(to_user_id):
         flash('You have already sent a swap request to this user.', 'error')
         return redirect(url_for('search'))
     
-    # Create swap request with specific skills
+    # Create swap request with specific skills and optional message
     swap = SwapRequest(
         from_user_id=current_user.id, 
         to_user_id=to_user_id,
         skill_offered_id=skill_offered_id,
-        skill_wanted_id=skill_wanted_id
+        skill_wanted_id=skill_wanted_id,
+        message=message if message else None
     )
     db.session.add(swap)
     db.session.commit()

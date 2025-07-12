@@ -105,6 +105,9 @@
                                                 General skill swap request
                                             {% endif %}
                                         </p>
+                                        {% if request.message %}
+                                            <p class="text-xs sm:text-sm text-blue-600 italic">"{{ request.message[:50] }}{% if request.message|length > 50 %}...{% endif %}"</p>
+                                        {% endif %}
                                         <p class="text-xs sm:text-sm text-gray-500">{{ request.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
                                     </div>
                                     <div class="flex-shrink-0">
@@ -143,6 +146,9 @@
                                                 General skill swap request
                                             {% endif %}
                                         </p>
+                                        {% if request.message %}
+                                            <p class="text-xs sm:text-sm text-blue-600 italic">"{{ request.message[:50] }}{% if request.message|length > 50 %}...{% endif %}"</p>
+                                        {% endif %}
                                         <p class="text-xs sm:text-sm text-gray-500">{{ request.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
                                     </div>
                                     <div class="flex-shrink-0">

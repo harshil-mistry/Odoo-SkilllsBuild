@@ -106,6 +106,16 @@
                                     </div>
                                 </div>
                                 
+                                <!-- Message -->
+                                {% if request.message %}
+                                    <div class="bg-blue-50 rounded-lg p-4 mb-4">
+                                        <h4 class="text-sm font-medium text-blue-800 mb-2">
+                                            <i class="fas fa-comment mr-1"></i>Message from {{ request.from_user.name }}:
+                                        </h4>
+                                        <p class="text-sm text-blue-700">{{ request.message }}</p>
+                                    </div>
+                                {% endif %}
+                                
                                 <!-- Timestamp -->
                                 <p class="text-sm text-gray-500">
                                     <i class="fas fa-calendar mr-1"></i>Requested on {{ request.created_at.strftime('%B %d, %Y at %I:%M %p') }}
@@ -223,6 +233,16 @@
                                         {% endif %}
                                     </div>
                                 </div>
+                                
+                                <!-- Message -->
+                                {% if request.message %}
+                                    <div class="bg-blue-50 rounded-lg p-4 mb-4">
+                                        <h4 class="text-sm font-medium text-blue-800 mb-2">
+                                            <i class="fas fa-comment mr-1"></i>Your message to {{ request.to_user.name }}:
+                                        </h4>
+                                        <p class="text-sm text-blue-700">{{ request.message }}</p>
+                                    </div>
+                                {% endif %}
                                 
                                 <!-- Timestamp -->
                                 <p class="text-sm text-gray-500">
