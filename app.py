@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+import io
 
 load_dotenv()
 
@@ -13,11 +14,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/skillsbuild'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Ensure upload folder exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -34,6 +31,16 @@ user_skills_wanted = db.Table('user_skills_wanted',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('skill_id', db.Integer, db.ForeignKey('skill.id'), primary_key=True)
 )
+
+# Swap Request Model
+class SwapRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    from_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    to_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    skill_offered_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=True)
+    skill_wanted_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=True)
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Skill Model
 class Skill(db.Model):
@@ -52,7 +59,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     location = db.Column(db.String(100), nullable=True)
-    profile_photo = db.Column(db.String(255), nullable=True)
+    profile_photo = db.Column(db.LargeBinary, nullable=True)  # Changed to BLOB
+    profile_photo_type = db.Column(db.String(50), nullable=True)  # Store MIME type
     bio = db.Column(db.Text, nullable=True)
     is_public = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -105,14 +113,13 @@ def register():
         
         # Handle profile photo upload
         profile_photo = None
+        profile_photo_type = None
         if 'profile_photo' in request.files:
             file = request.files['profile_photo']
             if file and file.filename != '':
-                filename = secure_filename(file.filename)
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f"{timestamp}_{filename}"
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                profile_photo = filename
+                # Read file as binary
+                profile_photo = file.read()
+                profile_photo_type = file.content_type
         
         # Create user
         hashed_password = generate_password_hash(password)
@@ -121,7 +128,8 @@ def register():
             email=email,
             password=hashed_password,
             location=location,
-            profile_photo=profile_photo
+            profile_photo=profile_photo,
+            profile_photo_type=profile_photo_type
         )
         
         db.session.add(new_user)
@@ -189,11 +197,9 @@ def profile():
             if 'profile_photo' in request.files:
                 file = request.files['profile_photo']
                 if file and file.filename != '':
-                    filename = secure_filename(file.filename)
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    filename = f"{timestamp}_{filename}"
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    current_user.profile_photo = filename
+                    # Read file as binary
+                    current_user.profile_photo = file.read()
+                    current_user.profile_photo_type = file.content_type
             
             db.session.commit()
             flash('Profile updated successfully!', 'success')
@@ -202,6 +208,69 @@ def profile():
     # Get all available skills for the form
     all_skills = Skill.query.all()
     return render_template('profile.html', all_skills=all_skills)
+
+@app.route('/profile_photo/<int:user_id>')
+def profile_photo(user_id):
+    """Serve profile photo as image"""
+    user = User.query.get_or_404(user_id)
+    if user.profile_photo:
+        return send_file(
+            io.BytesIO(user.profile_photo),
+            mimetype=user.profile_photo_type or 'image/jpeg'
+        )
+    else:
+        # Return a default image or 404
+        return '', 404
+
+@app.route('/search')
+@login_required
+def search():
+    query = request.args.get('q', '').strip()
+    location = request.args.get('location', '').strip()
+    availability = request.args.getlist('availability')  # e.g. ['weekdays', 'weekends']
+
+    users = User.query.filter(User.is_public == True, User.id != current_user.id)
+
+    if query:
+        users = users.join(User.skills_offered).filter(Skill.name.ilike(f'%{query}%'))
+
+    if location:
+        users = users.filter(User.location.ilike(f'%{location}%'))
+
+    if availability:
+        if 'weekdays' in availability:
+            users = users.filter(User.weekdays_available == True)
+        if 'evenings' in availability:
+            users = users.filter(User.evenings_available == True)
+        if 'weekends' in availability:
+            users = users.filter(User.weekends_available == True)
+
+    users = users.distinct().all()
+    return render_template('search.html', users=users, query=query, location=location, availability=availability)
+
+@app.route('/send_swap_request/<int:to_user_id>', methods=['POST'])
+@login_required
+def send_swap_request(to_user_id):
+    if to_user_id == current_user.id:
+        flash('You cannot send a swap request to yourself.', 'error')
+        return redirect(url_for('search'))
+    
+    # Check if request already exists
+    existing_request = SwapRequest.query.filter_by(
+        from_user_id=current_user.id, 
+        to_user_id=to_user_id,
+        status='pending'
+    ).first()
+    
+    if existing_request:
+        flash('You have already sent a swap request to this user.', 'error')
+        return redirect(url_for('search'))
+    
+    swap = SwapRequest(from_user_id=current_user.id, to_user_id=to_user_id)
+    db.session.add(swap)
+    db.session.commit()
+    flash('Swap request sent!', 'success')
+    return redirect(url_for('search'))
 
 @app.route('/api/skills', methods=['GET'])
 @login_required

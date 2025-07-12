@@ -9,7 +9,7 @@ from mysql.connector import Error
 import sys
 
 def create_database():
-    """Create the skillsbuild database if it doesn't exist."""
+    """Drop and recreate the skillsbuild database from scratch."""
     try:
         # Connect to MySQL server (without specifying database)
         connection = mysql.connector.connect(
@@ -21,9 +21,13 @@ def create_database():
         if connection.is_connected():
             cursor = connection.cursor()
             
-            # Create database
-            cursor.execute("CREATE DATABASE IF NOT EXISTS skillsbuild")
-            print("✅ Database 'skillsbuild' created successfully or already exists.")
+            # Drop database if exists
+            cursor.execute("DROP DATABASE IF EXISTS skillsbuild")
+            print("🗑️ Dropped existing database 'skillsbuild'.")
+            
+            # Create fresh database
+            cursor.execute("CREATE DATABASE skillsbuild")
+            print("✅ Created fresh database 'skillsbuild'.")
             
             # Use the database
             cursor.execute("USE skillsbuild")
@@ -40,15 +44,16 @@ def create_database():
             cursor.execute(create_skills_table)
             print("✅ Skills table created successfully or already exists.")
             
-            # Create users table with new fields
+            # Create users table with BLOB profile photo
             create_users_table = """
-            CREATE TABLE IF NOT EXISTS user (
+            CREATE TABLE user (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(100) NOT NULL,
                 email VARCHAR(120) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 location VARCHAR(100),
-                profile_photo VARCHAR(255),
+                profile_photo LONGBLOB,
+                profile_photo_type VARCHAR(50),
                 bio TEXT,
                 is_public BOOLEAN DEFAULT TRUE,
                 weekdays_available BOOLEAN DEFAULT FALSE,
@@ -63,7 +68,7 @@ def create_database():
             
             # Create association tables for many-to-many relationships
             create_user_skills_offered_table = """
-            CREATE TABLE IF NOT EXISTS user_skills_offered (
+            CREATE TABLE user_skills_offered (
                 user_id INT,
                 skill_id INT,
                 PRIMARY KEY (user_id, skill_id),
@@ -72,10 +77,10 @@ def create_database():
             )
             """
             cursor.execute(create_user_skills_offered_table)
-            print("✅ User skills offered table created successfully or already exists.")
+            print("✅ User skills offered table created successfully.")
             
             create_user_skills_wanted_table = """
-            CREATE TABLE IF NOT EXISTS user_skills_wanted (
+            CREATE TABLE user_skills_wanted (
                 user_id INT,
                 skill_id INT,
                 PRIMARY KEY (user_id, skill_id),
@@ -84,7 +89,26 @@ def create_database():
             )
             """
             cursor.execute(create_user_skills_wanted_table)
-            print("✅ User skills wanted table created successfully or already exists.")
+            print("✅ User skills wanted table created successfully.")
+            
+            # Create swap requests table
+            create_swap_requests_table = """
+            CREATE TABLE swap_request (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                from_user_id INT NOT NULL,
+                to_user_id INT NOT NULL,
+                skill_offered_id INT,
+                skill_wanted_id INT,
+                status VARCHAR(20) DEFAULT 'pending',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (from_user_id) REFERENCES user(id) ON DELETE CASCADE,
+                FOREIGN KEY (to_user_id) REFERENCES user(id) ON DELETE CASCADE,
+                FOREIGN KEY (skill_offered_id) REFERENCES skill(id) ON DELETE SET NULL,
+                FOREIGN KEY (skill_wanted_id) REFERENCES skill(id) ON DELETE SET NULL
+            )
+            """
+            cursor.execute(create_swap_requests_table)
+            print("✅ Swap requests table created successfully.")
             
             # Insert some sample skills
             sample_skills = [
