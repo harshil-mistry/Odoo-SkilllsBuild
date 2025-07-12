@@ -96,20 +96,24 @@
                         <div class="flex items-center space-x-4">
                             <!-- Profile Photo -->
                             <div class="flex-shrink-0">
-                                {% if user.profile_photo %}
-                                    <img class="h-16 w-16 rounded-full object-cover border-2 border-gray-200" 
-                                         src="{{ url_for('profile_photo', user_id=user.id) }}" 
-                                         alt="Profile photo">
-                                {% else %}
-                                    <div class="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                                        <i class="fas fa-user text-white text-xl"></i>
-                                    </div>
-                                {% endif %}
+                                <a href="{{ url_for('user_profile', user_id=user.id) }}" class="block hover:opacity-80 transition-opacity">
+                                    {% if user.profile_photo %}
+                                        <img class="h-16 w-16 rounded-full object-cover border-2 border-gray-200" 
+                                             src="{{ url_for('profile_photo', user_id=user.id) }}" 
+                                             alt="Profile photo">
+                                    {% else %}
+                                        <div class="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                                            <i class="fas fa-user text-white text-xl"></i>
+                                        </div>
+                                    {% endif %}
+                                </a>
                             </div>
                             
                             <!-- User Info -->
                             <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-semibold text-gray-900 truncate">{{ user.name }}</h3>
+                                <a href="{{ url_for('user_profile', user_id=user.id) }}" class="block hover:text-blue-600 transition-colors">
+                                    <h3 class="text-lg font-semibold text-gray-900 truncate">{{ user.name }}</h3>
+                                </a>
                                 {% if user.location %}
                                     <p class="text-sm text-gray-600">
                                         <i class="fas fa-map-marker-alt mr-1"></i>{{ user.location }}

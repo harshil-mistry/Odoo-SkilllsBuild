@@ -175,7 +175,53 @@ def login():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    # Get swap request statistics
+    sent_requests = SwapRequest.query.filter_by(from_user_id=current_user.id).all()
+    received_requests = SwapRequest.query.filter_by(to_user_id=current_user.id).all()
+    
+    # Calculate statistics
+    total_sent = len(sent_requests)
+    total_received = len(received_requests)
+    pending_received = len([r for r in received_requests if r.status == 'pending'])
+    accepted_requests = len([r for r in sent_requests + received_requests if r.status == 'accepted'])
+    
+    # Get recent swap requests (last 5)
+    recent_sent = SwapRequest.query.filter_by(from_user_id=current_user.id).order_by(SwapRequest.created_at.desc()).limit(3).all()
+    recent_received = SwapRequest.query.filter_by(to_user_id=current_user.id).order_by(SwapRequest.created_at.desc()).limit(3).all()
+    
+    # Get users with matching skills (potential swap partners)
+    potential_partners = []
+    if current_user.skills_wanted:
+        # Find users who offer skills that current user wants
+        for wanted_skill in current_user.skills_wanted:
+            users_with_skill = User.query.filter(
+                User.skills_offered.contains(wanted_skill),
+                User.is_public == True,
+                User.id != current_user.id
+            ).limit(3).all()
+            potential_partners.extend(users_with_skill)
+    
+    # Remove duplicates and limit to 5
+    potential_partners = list({user.id: user for user in potential_partners}.values())[:5]
+    
+    # Calculate profile completion percentage
+    profile_fields = [
+        current_user.name, current_user.location, current_user.bio, 
+        current_user.profile_photo, current_user.skills_offered, current_user.skills_wanted,
+        current_user.weekdays_available, current_user.evenings_available, current_user.weekends_available
+    ]
+    completed_fields = sum(1 for field in profile_fields if field and (not hasattr(field, '__len__') or len(field) > 0))
+    profile_completion = int((completed_fields / len(profile_fields)) * 100)
+    
+    return render_template('dashboard.html',
+                         total_sent=total_sent,
+                         total_received=total_received,
+                         pending_received=pending_received,
+                         accepted_requests=accepted_requests,
+                         recent_sent=recent_sent,
+                         recent_received=recent_received,
+                         potential_partners=potential_partners,
+                         profile_completion=profile_completion)
 
 @app.route('/logout')
 @login_required
@@ -496,6 +542,42 @@ def delete_swap_request(request_id):
     
     flash('Swap request deleted.', 'info')
     return redirect(url_for('swap_requests'))
+
+@app.route('/user/<int:user_id>')
+def user_profile(user_id):
+    """View public profile of a user"""
+    user = User.query.get_or_404(user_id)
+    
+    # Check if user profile is public
+    if not user.is_public:
+        flash('This profile is private.', 'error')
+        return redirect(url_for('search'))
+    
+    # Get user's swap request statistics
+    sent_requests = SwapRequest.query.filter_by(from_user_id=user.id).all()
+    received_requests = SwapRequest.query.filter_by(to_user_id=user.id).all()
+    
+    total_sent = len(sent_requests)
+    total_received = len(received_requests)
+    accepted_requests = len([r for r in sent_requests + received_requests if r.status == 'accepted'])
+    
+    # Check if current user is authenticated and can send swap requests
+    can_send_request = False
+    if current_user.is_authenticated and current_user.id != user.id:
+        # Check if there's already a pending request
+        existing_request = SwapRequest.query.filter_by(
+            from_user_id=current_user.id, 
+            to_user_id=user.id,
+            status='pending'
+        ).first()
+        can_send_request = not existing_request
+    
+    return render_template('user_profile.html',
+                         user=user,
+                         total_sent=total_sent,
+                         total_received=total_received,
+                         accepted_requests=accepted_requests,
+                         can_send_request=can_send_request)
 
 if __name__ == '__main__':
     with app.app_context():
