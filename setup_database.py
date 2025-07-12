@@ -101,6 +101,8 @@ def create_database():
                 skill_wanted_id INT,
                 message TEXT,
                 status VARCHAR(20) DEFAULT 'pending',
+                from_user_completed BOOLEAN DEFAULT FALSE,
+                to_user_completed BOOLEAN DEFAULT FALSE,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (from_user_id) REFERENCES user(id) ON DELETE CASCADE,
                 FOREIGN KEY (to_user_id) REFERENCES user(id) ON DELETE CASCADE,
@@ -110,6 +112,24 @@ def create_database():
             """
             cursor.execute(create_swap_requests_table)
             print("✅ Swap requests table created successfully.")
+            
+            # Create reviews table
+            create_reviews_table = """
+            CREATE TABLE review (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                swap_request_id INT NOT NULL,
+                reviewer_id INT NOT NULL,
+                reviewed_user_id INT NOT NULL,
+                rating INT NOT NULL,
+                review_text TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (swap_request_id) REFERENCES swap_request(id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewer_id) REFERENCES user(id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_user_id) REFERENCES user(id) ON DELETE CASCADE
+            )
+            """
+            cursor.execute(create_reviews_table)
+            print("✅ Reviews table created successfully.")
             
             # Insert some sample skills
             sample_skills = [

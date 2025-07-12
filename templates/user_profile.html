@@ -71,7 +71,7 @@
     </div>
     
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
@@ -108,8 +108,28 @@
                     </div>
                 </div>
                 <div class="ml-3 sm:ml-4">
-                    <p class="text-xs sm:text-sm font-medium text-gray-500">Successful Swaps</p>
-                    <p class="text-lg sm:text-2xl font-semibold text-gray-900">{{ accepted_requests }}</p>
+                    <p class="text-xs sm:text-sm font-medium text-gray-500">Completed Swaps</p>
+                    <p class="text-lg sm:text-2xl font-semibold text-gray-900">{{ completed_requests }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <div class="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                        <i class="fas fa-star text-white text-xs sm:text-sm"></i>
+                    </div>
+                </div>
+                <div class="ml-3 sm:ml-4">
+                    <p class="text-xs sm:text-sm font-medium text-gray-500">Average Rating</p>
+                    <p class="text-lg sm:text-2xl font-semibold text-gray-900">
+                        {% if average_rating > 0 %}
+                            {{ "%.1f"|format(average_rating) }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </p>
                 </div>
             </div>
         </div>
@@ -187,6 +207,52 @@
                             <i class="fas fa-calendar-week mr-1 sm:mr-2"></i>Weekends
                         </span>
                     {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Reviews Section -->
+    {% if reviews %}
+        <div class="bg-white rounded-lg shadow-md border border-gray-200 mt-6 sm:mt-8">
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
+                <h3 class="text-base sm:text-lg font-semibold text-gray-900">
+                    <i class="fas fa-star text-yellow-600 mr-2"></i>Reviews ({{ reviews|length }})
+                </h3>
+            </div>
+            <div class="p-4 sm:p-6">
+                <div class="space-y-4">
+                    {% for review in reviews %}
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-shrink-0">
+                                        {% if review.reviewer.profile_photo %}
+                                            <img class="h-8 w-8 rounded-full object-cover border border-gray-200" 
+                                                 src="{{ url_for('profile_photo', user_id=review.reviewer.id) }}" 
+                                                 alt="Reviewer photo">
+                                        {% else %}
+                                            <div class="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                                                <i class="fas fa-user text-white text-xs"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">{{ review.reviewer.name }}</p>
+                                        <p class="text-xs text-gray-500">{{ review.created_at.strftime('%B %d, %Y') }}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    {% for i in range(5) %}
+                                        <i class="fas fa-star text-sm {% if i < review.rating %}text-yellow-400{% else %}text-gray-300{% endif %}"></i>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% if review.review_text %}
+                                <p class="text-sm text-gray-700">{{ review.review_text }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>

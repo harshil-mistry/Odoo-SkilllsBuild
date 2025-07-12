@@ -32,6 +32,21 @@ user_skills_wanted = db.Table('user_skills_wanted',
     db.Column('skill_id', db.Integer, db.ForeignKey('skill.id'), primary_key=True)
 )
 
+# Review Model
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    swap_request_id = db.Column(db.Integer, db.ForeignKey('swap_request.id'), nullable=False)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    reviewed_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)  # 1-5 stars
+    review_text = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    swap_request = db.relationship('SwapRequest', backref='reviews')
+    reviewer = db.relationship('User', foreign_keys=[reviewer_id], backref='reviews_given')
+    reviewed_user = db.relationship('User', foreign_keys=[reviewed_user_id], backref='reviews_received')
+
 # Swap Request Model
 class SwapRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -40,7 +55,9 @@ class SwapRequest(db.Model):
     skill_offered_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=True)
     skill_wanted_id = db.Column(db.Integer, db.ForeignKey('skill.id'), nullable=True)
     message = db.Column(db.Text, nullable=True)  # Optional message from sender
-    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected, completed
+    from_user_completed = db.Column(db.Boolean, default=False)  # Track completion by each user
+    to_user_completed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -185,6 +202,7 @@ def dashboard():
     total_received = len(received_requests)
     pending_received = len([r for r in received_requests if r.status == 'pending'])
     accepted_requests = len([r for r in sent_requests + received_requests if r.status == 'accepted'])
+    completed_requests = len([r for r in sent_requests + received_requests if r.status == 'completed'])
     
     # Get recent swap requests (last 5)
     recent_sent = SwapRequest.query.filter_by(from_user_id=current_user.id).order_by(SwapRequest.created_at.desc()).limit(3).all()
@@ -219,6 +237,7 @@ def dashboard():
                          total_received=total_received,
                          pending_received=pending_received,
                          accepted_requests=accepted_requests,
+                         completed_requests=completed_requests,
                          recent_sent=recent_sent,
                          recent_received=recent_received,
                          potential_partners=potential_partners,
@@ -546,6 +565,94 @@ def delete_swap_request(request_id):
     flash('Swap request deleted.', 'info')
     return redirect(url_for('swap_requests'))
 
+@app.route('/complete_swap_request/<int:request_id>', methods=['POST'])
+@login_required
+def complete_swap_request(request_id):
+    """Mark a swap request as completed by the current user"""
+    swap_request = SwapRequest.query.get_or_404(request_id)
+    
+    # Check if current user is involved in this request
+    if swap_request.from_user_id != current_user.id and swap_request.to_user_id != current_user.id:
+        flash('You can only complete requests you are involved in.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Check if request is accepted
+    if swap_request.status != 'accepted':
+        flash('You can only complete accepted requests.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Mark as completed by current user
+    if swap_request.from_user_id == current_user.id:
+        swap_request.from_user_completed = True
+    else:
+        swap_request.to_user_completed = True
+    
+    # Check if both users have completed
+    if swap_request.from_user_completed and swap_request.to_user_completed:
+        swap_request.status = 'completed'
+        flash('Swap request completed! Both users have marked it as finished.', 'success')
+    else:
+        flash('You have marked this swap request as completed. Waiting for the other user to complete.', 'success')
+    
+    db.session.commit()
+    return redirect(url_for('swap_requests'))
+
+@app.route('/submit_review/<int:request_id>', methods=['POST'])
+@login_required
+def submit_review(request_id):
+    """Submit a review for a completed swap request"""
+    swap_request = SwapRequest.query.get_or_404(request_id)
+    
+    # Check if current user is involved in this request
+    if swap_request.from_user_id != current_user.id and swap_request.to_user_id != current_user.id:
+        flash('You can only review requests you are involved in.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Check if request is completed
+    if swap_request.status != 'completed':
+        flash('You can only review completed requests.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Check if user has already submitted a review
+    existing_review = Review.query.filter_by(
+        swap_request_id=request_id,
+        reviewer_id=current_user.id
+    ).first()
+    
+    if existing_review:
+        flash('You have already submitted a review for this swap request.', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Get form data
+    rating = request.form.get('rating', type=int)
+    review_text = request.form.get('review_text', '').strip()
+    
+    # Validate rating
+    if not rating or rating < 1 or rating > 5:
+        flash('Please provide a valid rating (1-5 stars).', 'error')
+        return redirect(url_for('swap_requests'))
+    
+    # Determine the user being reviewed
+    if swap_request.from_user_id == current_user.id:
+        reviewed_user_id = swap_request.to_user_id
+    else:
+        reviewed_user_id = swap_request.from_user_id
+    
+    # Create review
+    review = Review(
+        swap_request_id=request_id,
+        reviewer_id=current_user.id,
+        reviewed_user_id=reviewed_user_id,
+        rating=rating,
+        review_text=review_text if review_text else None
+    )
+    
+    db.session.add(review)
+    db.session.commit()
+    
+    flash('Review submitted successfully!', 'success')
+    return redirect(url_for('swap_requests'))
+
 @app.route('/user/<int:user_id>')
 def user_profile(user_id):
     """View public profile of a user"""
@@ -563,6 +670,13 @@ def user_profile(user_id):
     total_sent = len(sent_requests)
     total_received = len(received_requests)
     accepted_requests = len([r for r in sent_requests + received_requests if r.status == 'accepted'])
+    completed_requests = len([r for r in sent_requests + received_requests if r.status == 'completed'])
+    
+    # Get user's reviews and calculate average rating
+    reviews = Review.query.filter_by(reviewed_user_id=user.id).order_by(Review.created_at.desc()).all()
+    average_rating = 0
+    if reviews:
+        average_rating = sum(review.rating for review in reviews) / len(reviews)
     
     # Check if current user is authenticated and can send swap requests
     can_send_request = False
@@ -580,6 +694,9 @@ def user_profile(user_id):
                          total_sent=total_sent,
                          total_received=total_received,
                          accepted_requests=accepted_requests,
+                         completed_requests=completed_requests,
+                         reviews=reviews,
+                         average_rating=average_rating,
                          can_send_request=can_send_request)
 
 @app.errorhandler(404)
